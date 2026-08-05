@@ -1,0 +1,46 @@
+# Git ignore rules for AI Voice Calling Platform
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Virtual environments ──────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Secrets — NEVER commit these ─────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── IDEs ─────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Testing & coverage ───────────────────────────────────────
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Alembic auto-generated cache ─────────────────────────────
+alembic/versions/__pycache__/
