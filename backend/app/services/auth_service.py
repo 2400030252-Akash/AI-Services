@@ -47,7 +47,11 @@ class AuthService:
         # Always run bcrypt even on miss to avoid timing oracle
         dummy_hash = "$2b$12$3jIcGRZs5qvQWEGr4pfXtOxWaDSIorzsnRBguKJAT3SiV0EUuUNNy"
         password_to_check = admin.password_hash if admin else dummy_hash
-        password_ok = verify_password(password, password_to_check)
+        try:
+            password_ok = verify_password(password, password_to_check)
+        except Exception:
+            password_ok = False
+
 
         if not admin or not password_ok:
             raise HTTPException(

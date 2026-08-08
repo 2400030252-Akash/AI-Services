@@ -11,8 +11,8 @@ WORKDIR /build
 
 # System dependencies required to compile native Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
-        libpq-dev \
+    build-essential \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies into an isolated prefix
@@ -29,7 +29,7 @@ COPY --from=builder /install /usr/local
 
 # Runtime system libs (libpq for asyncpg)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libpq5 \
+    libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
 # Non-root user for security
@@ -46,8 +46,4 @@ USER appuser
 EXPOSE 8000
 
 # Gunicorn + Uvicorn workers for production throughput
-CMD ["uvicorn", "app.main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--workers", "4", \
-     "--log-level", "info"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
