@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Annotated
 
 from pydantic import (
+    AliasChoices,
     AnyHttpUrl,
     Field,
     field_validator,
@@ -121,7 +122,8 @@ class Settings(BaseSettings):
         description="Your Supabase project URL, e.g. https://<ref>.supabase.co"
     )
     supabase_key: _NonEmptyStr = Field(
-        description="Supabase service-role secret key (never expose to clients)."
+        validation_alias=AliasChoices("supabase_key", "supabase_service_role_key"),
+        description="Supabase service-role secret key (never expose to clients).",
     )
 
     @field_validator("supabase_url")
@@ -135,10 +137,12 @@ class Settings(BaseSettings):
     # JWT
     # -----------------------------------------------------------------------
     jwt_secret: _NonEmptyStr = Field(
-        description="Secret key used to sign and verify JWT tokens."
+        validation_alias=AliasChoices("jwt_secret", "jwt_secret_key"),
+        description="Secret key used to sign and verify JWT tokens.",
     )
     algorithm: str = Field(
         default="HS256",
+        validation_alias=AliasChoices("algorithm", "jwt_algorithm"),
         description="JWT signing algorithm.",
     )
     access_token_expire_minutes: int = Field(
