@@ -55,7 +55,7 @@ class Call(UUIDPrimaryKey, Base):
         unique=True,
         nullable=False,
         index=True,
-        comment="Twilio CallSid — globally unique per call.",
+        comment="Telephony provider call SID (Twilio/Exotel) — globally unique per call.",
     )
     from_number: Mapped[str] = mapped_column(
         String(20),

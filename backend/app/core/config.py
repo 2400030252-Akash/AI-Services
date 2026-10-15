@@ -17,6 +17,7 @@ Usage everywhere in the project::
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from typing import Annotated
 
 from pydantic import (
@@ -27,6 +28,12 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
+# ---------------------------------------------------------------------------
+# Path to backend .env file
+# ---------------------------------------------------------------------------
+_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+_ENV_FILE = _BACKEND_DIR / ".env"
 
 # ---------------------------------------------------------------------------
 # Helper type alias
@@ -40,14 +47,14 @@ class Settings(BaseSettings):
 
     Reads from (in priority order):
       1. Real environment variables
-      2. .env file in the project root
+      2. .env file in the backend directory (or current working directory)
 
     Any field without a default is **required**.  Missing required fields
     produce a ValidationError at startup with the exact variable name(s).
     """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_ENV_FILE) if _ENV_FILE.exists() else ".env",
         env_file_encoding="utf-8",
         extra="ignore",          # silently drop unknown env vars
         case_sensitive=False,    # DATABASE_URL == database_url
@@ -161,8 +168,8 @@ class Settings(BaseSettings):
         description="NVIDIA OpenAI-compatible API base URL.",
     )
     nvidia_model: str = Field(
-        default="deepseek-ai/deepseek-r1",
-        description="Model identifier to use for AI completions.",
+        default="moonshotai/kimi-k3",
+        description="Model identifier to use for AI completions (e.g. 'moonshotai/kimi-k3').",
     )
 
     @field_validator("nvidia_api_key")
@@ -176,16 +183,19 @@ class Settings(BaseSettings):
         return v
 
     # -----------------------------------------------------------------------
-    # Twilio Voice
+    # Twilio Voice  (optional — only needed when telephony_provider='twilio')
     # -----------------------------------------------------------------------
-    twilio_account_sid: _NonEmptyStr = Field(
-        description="Twilio Account SID (starts with 'AC')."
+    twilio_account_sid: str = Field(
+        default="",
+        description="Twilio Account SID (starts with 'AC'). Optional if using Exotel.",
     )
-    twilio_auth_token: _NonEmptyStr = Field(
-        description="Twilio Auth Token — keep this secret."
+    twilio_auth_token: str = Field(
+        default="",
+        description="Twilio Auth Token — keep this secret. Optional if using Exotel.",
     )
-    twilio_phone_number: _NonEmptyStr = Field(
-        description="Twilio purchased phone number in E.164 format, e.g. +15551234567."
+    twilio_phone_number: str = Field(
+        default="",
+        description="Twilio purchased phone number in E.164 format, e.g. +15551234567. Optional if using Exotel.",
     )
     twilio_skip_signature_validation: bool = Field(
         default=False,
@@ -195,7 +205,7 @@ class Settings(BaseSettings):
     @field_validator("twilio_account_sid")
     @classmethod
     def _validate_twilio_sid(cls, v: str) -> str:
-        if not v.startswith("AC"):
+        if v and not v.startswith("AC"):
             raise ValueError(
                 "TWILIO_ACCOUNT_SID must start with 'AC'. "
                 "Find it in your Twilio Console dashboard."
@@ -205,11 +215,97 @@ class Settings(BaseSettings):
     @field_validator("twilio_phone_number")
     @classmethod
     def _validate_twilio_phone(cls, v: str) -> str:
-        if not v.startswith("+"):
+        if v and not v.startswith("+"):
             raise ValueError(
                 "TWILIO_PHONE_NUMBER must be in E.164 format, e.g. +15551234567."
             )
         return v
+
+    # -----------------------------------------------------------------------
+    # Exotel Voice
+    # -----------------------------------------------------------------------
+    exotel_api_key: str = Field(
+        default="",
+        description="Exotel API Key for authentication.",
+    )
+    exotel_api_token: str = Field(
+        default="",
+        description="Exotel API Token (secret) for authentication.",
+    )
+    exotel_account_sid: str = Field(
+        default="",
+        description="Exotel Account SID.",
+    )
+    exotel_subdomain: str = Field(
+        default="api.in.exotel.com",
+        description="Exotel API subdomain (api.in.exotel.com for India, api.exotel.com for Singapore).",
+    )
+    exotel_exophone: str = Field(
+        default="",
+        description="Exotel virtual phone number (ExoPhone).",
+    )
+    exotel_caller_id: str = Field(
+        default="",
+        description="Exotel Caller ID for outbound calls (usually same as ExoPhone).",
+    )
+
+    # -----------------------------------------------------------------------
+    # Deepgram  (Speech-to-Text)
+    # -----------------------------------------------------------------------
+    deepgram_api_key: str = Field(
+        default="",
+        description="Deepgram API key for real-time speech-to-text.",
+    )
+
+    # -----------------------------------------------------------------------
+    # News Retrieval Service (NewsAPI.org)
+    # -----------------------------------------------------------------------
+    news_api_key: str = Field(
+        default="",
+        description="NewsAPI.org API key for fetching current headlines and topics.",
+    )
+    news_api_base_url: str = Field(
+        default="https://newsapi.org/v2",
+        description="Base URL for News API.",
+    )
+    news_country: str = Field(
+        default="in",
+        description="Default 2-letter ISO country code for top headlines (e.g. 'in' for India, 'us' for USA).",
+    )
+
+    # -----------------------------------------------------------------------
+    # Exotel Account Capability Flag
+    # -----------------------------------------------------------------------
+    exotel_streaming_enabled: bool = Field(
+        default=False,
+        description="Whether the Exotel account has AgentStream / Voicebot Applet enabled. False by default for trial accounts until verified with Exotel support.",
+    )
+
+    # -----------------------------------------------------------------------
+    # Exotel Voice Agent Custom API Integration
+    # -----------------------------------------------------------------------
+    voice_agent_api_key: str = Field(
+        default="",
+        description="Dedicated API secret key to authenticate Exotel Voice Agent HTTP requests (via X-API-Key or Bearer header).",
+    )
+
+    # -----------------------------------------------------------------------
+    # Active Telephony Provider
+    # -----------------------------------------------------------------------
+    telephony_provider: str = Field(
+        default="exotel",
+        description="Active telephony provider: 'twilio' or 'exotel'.",
+    )
+
+    @field_validator("telephony_provider")
+    @classmethod
+    def _validate_telephony_provider(cls, v: str) -> str:
+        allowed = ("twilio", "exotel")
+        if v.lower() not in allowed:
+            raise ValueError(
+                f"TELEPHONY_PROVIDER must be one of {allowed}, got '{v}'."
+            )
+        return v.lower()
 
     # -----------------------------------------------------------------------
     # Cross-field startup guard

@@ -54,9 +54,16 @@ from app.api.auth import router as auth_router            # noqa: E402
 from app.api.calls import router as calls_router          # noqa: E402
 from app.api.dashboard import router as dashboard_router  # noqa: E402
 from app.api.voice import router as voice_router          # noqa: E402
+from app.api.exotel_voice import router as exotel_voice_router    # noqa: E402
+from app.api.exotel_status import router as exotel_status_router  # noqa: E402
+from app.api.voice_agent import router as voice_agent_router      # noqa: E402
 
 app.include_router(auth_router,      prefix="/api/v1/auth",      tags=["auth"])
 app.include_router(calls_router,     prefix="/api/v1/calls",     tags=["calls"])
 app.include_router(dashboard_router, prefix="/api/v1/dashboard", tags=["dashboard"])
 app.include_router(voice_router,     prefix="/api/v1/voice",     tags=["voice"])
+app.include_router(exotel_voice_router,  prefix="/api/v1/exotel", tags=["exotel-voice"])
+app.include_router(exotel_status_router, prefix="/api/v1/exotel", tags=["exotel-status"])
+app.include_router(voice_agent_router,   prefix="/api/v1/voice-agent", tags=["voice-agent"])
+
 
