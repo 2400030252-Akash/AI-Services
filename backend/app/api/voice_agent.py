@@ -19,7 +19,7 @@ import asyncio
 import logging
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Security, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Security, status
 
 from app.api.deps_voice_agent import validate_voice_agent_auth
 from app.schemas.conversation import LLMMessage
@@ -129,3 +129,49 @@ async def ask_voice_agent(
         conversation_id=payload.conversation_id,
         status="success",
     )
+
+
+# ---------------------------------------------------------------------------
+# GET /ask — enables tools configured with HTTP GET in Exotel Studio
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/ask/{auth_token}",
+    response_model=VoiceAgentAskResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+    dependencies=[Security(validate_voice_agent_auth)],
+)
+@router.get(
+    "/{auth_token}/ask",
+    response_model=VoiceAgentAskResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+    dependencies=[Security(validate_voice_agent_auth)],
+)
+@router.get(
+    "/ask",
+    response_model=VoiceAgentAskResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Ask AI Assistant via GET (Exotel Voice Agent Custom API Integration)",
+    description=(
+        "Enables Exotel Voice Agent tools configured with HTTP GET to query the AI assistant using query parameters. "
+        "Supports ?question=... and ?api_key=..."
+    ),
+    dependencies=[Security(validate_voice_agent_auth)],
+)
+async def ask_voice_agent_get(
+    question: str = Query(..., description="The caller's question or speech input"),
+    conversation_id: str | None = Query(default=None, description="Optional call/conversation ID"),
+    auth_token: str | None = None,
+) -> VoiceAgentAskResponse:
+    """
+    HTTP GET endpoint for Exotel tools configured with GET method.
+    Passes the query parameter `question` to the AI engine.
+    """
+    payload = VoiceAgentAskRequest(
+        question=question,
+        conversation_id=conversation_id,
+    )
+    return await ask_voice_agent(payload=payload, auth_token=auth_token)
+
