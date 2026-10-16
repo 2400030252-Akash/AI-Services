@@ -41,9 +41,15 @@ export default function CallDetailModal({ callId, onClose }: CallDetailModalProp
     setLoading(true);
     setError(null);
 
-    fetch(`/api/calls/${callId}/conversation`)
+    // Fetch call details with embedded conversations
+    fetch(`/api/calls/${callId}`)
       .then(async (res) => {
         if (!res.ok) {
+          // Fallback to /conversation if full call route is not yet available
+          const fallbackRes = await fetch(`/api/calls/${callId}/conversation`);
+          if (fallbackRes.ok) {
+            return fallbackRes.json();
+          }
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.message || "Failed to load call transcript");
         }
@@ -51,7 +57,20 @@ export default function CallDetailModal({ callId, onClose }: CallDetailModalProp
       })
       .then((resData) => {
         if (isMounted) {
-          setData(resData);
+          const normalizedData: CallDetailData = {
+            id: resData.id || resData.call_id || callId,
+            call_sid: resData.call_sid || "N/A",
+            from_number: resData.from_number || "Unknown",
+            to_number: resData.to_number || "Unknown",
+            status: resData.status || "completed",
+            direction: resData.direction || "inbound",
+            duration: resData.duration ?? null,
+            started_at: resData.started_at || null,
+            ended_at: resData.ended_at || null,
+            created_at: resData.created_at || new Date().toISOString(),
+            conversations: resData.conversations || resData.turns || [],
+          };
+          setData(normalizedData);
           setLoading(false);
         }
       })
@@ -71,17 +90,21 @@ export default function CallDetailModal({ callId, onClose }: CallDetailModalProp
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "N/A";
-    return new Date(dateStr).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
+    try {
+      return new Date(dateStr).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    } catch {
+      return dateStr;
+    }
   };
 
-  const getStatusBadge = (statusStr: string) => {
-    switch (statusStr.toLowerCase()) {
+  const getStatusBadge = (statusStr?: string | null) => {
+    switch (statusStr?.toLowerCase()) {
       case "active":
       case "in-progress":
         return "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
